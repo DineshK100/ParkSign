@@ -1,0 +1,72 @@
+# Nav2 planning stack for SignPark: map_server + planner_server (Smac Hybrid-A*, Reeds-Shepp).
+# __FOOTPRINT__ and __MIN_RADIUS__ are filled in from signpark_description/config/car.yaml
+# by navigation.launch.py. We use our own tracker instead of controller_server (see tracker.py).
+map_server:
+  ros__parameters:
+    use_sim_time: true
+    yaml_filename: ""   # set by the launch file (scenario map)
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 1.0
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      downsample_costmap: false
+      downsampling_factor: 1
+      tolerance: 0.2
+      allow_unknown: true
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 8.0
+      motion_model_for_search: "REEDS_SHEPP"   # allows reversing
+      angle_quantization_bins: 72
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 6.0
+      analytic_expansion_max_cost: 200.0
+      analytic_expansion_max_cost_override: false
+      minimum_turning_radius: __MIN_RADIUS__
+      reverse_penalty: 1.5
+      change_penalty: 0.5          # discourage needless direction changes
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0
+      retrospective_penalty: 0.015
+      lookup_table_size: 20.0
+      cache_obstacle_heuristic: false
+      debug_visualizations: false
+      use_quadratic_cost_penalty: false
+      downsample_obstacle_heuristic: true
+      allow_primitive_interpolation: false
+      smooth_path: true
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+        do_refinement: true
+        refinement_num: 2
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      global_frame: map
+      robot_base_frame: base_link
+      update_frequency: 2.0
+      publish_frequency: 1.0
+      resolution: 0.1
+      track_unknown_space: false
+      footprint: "__FOOTPRINT__"
+      footprint_padding: 0.0
+      plugins: ["static_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # >= circumscribed radius (base_link is the rear axle) so Smac can skip full footprint
+        # checks far from obstacles; steep decay keeps narrow spots cheap.
+        inflation_radius: 4.2
+        cost_scaling_factor: 8.0
+      always_send_full_costmap: true

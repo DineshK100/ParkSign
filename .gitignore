@@ -1,0 +1,11 @@
+build/
+install/
+log/
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+runs/
+src/signpark_learning/policies/*.zip
+src/signpark_learning/policies/tb/
+results/

@@ -1,0 +1,20 @@
+# Goal
+string spot_id
+string method            # "planner" (Hybrid-A*) | "rl" (learned policy)
+bool ignore_sign         # true = sign-blind baseline (E3)
+---
+# Result
+bool success
+string message
+string sign_class_used
+float32 position_error   # m
+float32 heading_error    # deg
+int32 direction_changes
+float32 path_length      # m
+float32 duration         # s
+bool collision
+---
+# Feedback
+string phase             # "planning" | "driving" | "aligning"
+float32 distance_to_goal
+int32 segment            # current path segment (direction changes so far)

@@ -1,0 +1,43 @@
+# Single source of truth for the car. Used by the Gazebo model generator,
+# the Nav2 footprint / turning radius, the path tracker and the RL environment.
+# base_link = center of the rear axle, on the ground.
+name: signpark_car
+length: 4.5            # m, bumper to bumper
+width: 1.8             # m
+height: 1.2            # m (body box top)
+wheelbase: 2.7         # m
+track: 1.55            # m, wheel separation
+rear_overhang: 0.9     # m, rear bumper -> rear axle
+wheel_radius: 0.33
+wheel_width: 0.22
+max_steer: 0.6         # rad (~34 deg) -> min turning radius = wheelbase / tan(max_steer)
+max_speed: 2.0         # m/s (parking speeds)
+max_accel: 1.5         # m/s^2
+mass: 1200.0
+cameras:                  # topics: /camera/<name>/image_raw, /camera/<name>/camera_info
+  front:
+    xyz: [3.55, 0.0, 1.3]   # relative to base_link
+    yaw: 0.0
+    hfov: 1.20              # rad (~69 deg)
+    width: 1280
+    height: 960
+    rate: 5.0
+  left:                     # side cameras read signs face-on while driving down the aisle
+    xyz: [1.35, 0.92, 1.3]
+    yaw: 1.5708
+    hfov: 1.20
+    width: 1280
+    height: 960
+    rate: 5.0
+  right:
+    xyz: [1.35, -0.92, 1.3]
+    yaw: -1.5708
+    hfov: 1.20
+    width: 1280
+    height: 960
+    rate: 5.0
+lidar:
+  xyz: [1.35, 0.0, 1.35]
+  samples: 360
+  range_max: 25.0
+  rate: 10.0

@@ -1,0 +1,46 @@
+# Parking lot layout (meters, map frame = Gazebo world frame).
+# TODO(Pratik): replace numbers with measurements of the real lot from satellite imagery
+# (keep the same structure: one aisle, a perpendicular row, a parallel curb, an angled row).
+bounds: {xmin: -10.0, xmax: 48.0, ymin: -11.0, ymax: 11.0}
+entrance: [-8.0, 0.0]
+spawn: {x: -6.0, y: -1.5, yaw: 0.0}
+aisle: {xmin: -10.0, xmax: 48.0, ymin: -3.5, ymax: 3.5}
+
+rows:
+  # Perpendicular row along the north side of the aisle; cars enter heading +y.
+  - geometry: perpendicular
+    prefix: P
+    count: 10
+    first_center: [4.0, 6.25]
+    step: [2.7, 0.0]
+    into_yaw_deg: 90.0
+    width: 2.7
+    length: 5.5
+    sign_classes: {head_in: 0.4, back_in: 0.4, no_parking: 0.2}
+  # Parallel spots along the south curb; parked heading +x (direction of traffic).
+  - geometry: parallel
+    prefix: L
+    count: 3
+    first_center: [4.75, -4.75]
+    step: [7.5, 0.0]
+    into_yaw_deg: 0.0
+    width: 2.5
+    length: 7.5
+    sign_classes: {parallel: 0.8, no_parking: 0.2}
+  # 60-degree angled spots on the south side (enter turning right while driving east).
+  - geometry: angled
+    prefix: A
+    count: 5
+    first_entry: [27.5, -3.5]     # midpoint of the spot entry line
+    step: [3.118, 0.0]            # 2.7 / sin(60deg)
+    into_yaw_deg: -60.0
+    width: 2.7
+    length: 5.5
+    sign_classes: {angled: 0.8, no_parking: 0.2}
+
+sign:
+  post_height: 2.5      # board center height; bottom clears parked cars
+  board_width: 1.0      # enlarged vs. real (~0.45 m) so it is legible from the aisle in sim
+  board_height: 1.3
+  setback: 0.4          # distance behind the end of the spot
+occupancy_prob: 0.3

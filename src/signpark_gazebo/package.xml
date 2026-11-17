@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>signpark_gazebo</name>
+  <version>0.1.0</version>
+  <description>SignPark parking-lot worlds, sign photos, scenarios and simulation launch.</description>
+  <maintainer email="drkarnat@ncsu.edu">Dinesh Karnati</maintainer>
+  <maintainer email="pthapa4@ncsu.edu">Pratik Thapa</maintainer>
+  <license>MIT</license>
+  <exec_depend>signpark_description</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-pil</exec_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>
