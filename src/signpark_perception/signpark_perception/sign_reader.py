@@ -5,7 +5,7 @@ they say). While the car drives, each post is projected into the camera image; w
 board is large enough in view (or about to leave the view), the best crop is sent to the
 classifier once and the result is published as a SignReading.
 
-Params: backend (claude|ocr|ground_truth), model, min_width_px, good_width_px,
+Params: backend (ollama|claude|ocr|ground_truth), model (default per backend), min_width_px, good_width_px,
         max_distance, min_facing, max_attempts, save_crops_dir
 """
 import os
@@ -31,8 +31,8 @@ class SignReader(Node):
         super().__init__('sign_reader')
         self.lot, self.scenario_dir = declare_scenario(self)
         p = self.declare_parameter
-        self.backend = p('backend', 'claude').value
-        model = p('model', 'claude-opus-5-5').value
+        self.backend = p('backend', 'ollama').value
+        model = p('model', '').value
         self.min_w = p('min_width_px', 60.0).value
         self.good_w = p('good_width_px', 130.0).value
         self.max_dist = p('max_distance', 16.0).value
@@ -41,7 +41,7 @@ class SignReader(Node):
         self.save_dir = p('save_crops_dir', os.path.join(self.scenario_dir, 'crops')).value
         os.makedirs(self.save_dir, exist_ok=True)
 
-        kw = {'model': model} if self.backend == 'claude' else {}
+        kw = {'model': model} if model and self.backend in ('ollama', 'claude') else {}
         self.clf = make_classifier(self.backend, **kw)
         car = load_car()
         self.cams = car.cameras

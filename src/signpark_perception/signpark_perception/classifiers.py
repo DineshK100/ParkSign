@@ -1,4 +1,5 @@
-"""Sign classifiers: Claude VLM, OCR + keyword baseline, and ground truth (for debugging).
+"""Sign classifiers: local VLM via Ollama (default), Claude VLM, OCR + keyword baseline,
+and ground truth (for debugging).
 
 All classifiers take an RGB image (numpy HxWx3 uint8) and return a SignResult.
 They are plain Python (no ROS) so the offline evaluation (E1) uses the same code.
@@ -118,6 +119,54 @@ class ClaudeClassifier:
 
 
 # ---------------------------------------------------------------------------
+# Local VLM via Ollama (default; no API key, runs on the GPU)
+# ---------------------------------------------------------------------------
+
+class OllamaClassifier:
+    """Any Ollama vision model (default qwen2.5vl:3b). Uses Ollama's JSON-schema `format`
+    so the answer is always one of the allowed classes."""
+
+    name = 'ollama'
+
+    def __init__(self, model: str = 'qwen2.5vl:3b', host: str = 'http://localhost:11434', timeout: float = 60.0):
+        self.model, self.host, self.timeout = model, host.rstrip('/'), timeout
+
+    def classify(self, img: np.ndarray) -> SignResult:
+        import urllib.error
+        import urllib.request
+        t0 = time.time()
+        body = json.dumps({
+            'model': self.model,
+            'messages': [{'role': 'user', 'content': PROMPT + '\nAnswer in JSON.', 'images': [_to_png_b64(img)]}],
+            'format': SCHEMA,
+            'stream': False,
+            'keep_alive': '30m',
+            'options': {'temperature': 0},
+        }).encode()
+        req = urllib.request.Request(self.host + '/api/chat', data=body, headers={'Content-Type': 'application/json'})
+        text, err = None, ''
+        for _ in range(2):  # one retry (model loading, GPU busy)
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                    text = json.loads(r.read())['message']['content']
+                break
+            except (urllib.error.URLError, TimeoutError, KeyError, ConnectionError) as e:
+                err = str(e)
+        if text is None:
+            return SignResult('unknown', raw=f'ollama error: {err}', latency_s=time.time() - t0)
+        dt = time.time() - t0
+        try:
+            d = json.loads(text)
+        except json.JSONDecodeError:
+            return SignResult('unknown', raw=text, latency_s=dt)
+        cls = d.get('sign_class', 'unknown')
+        if cls not in SIGN_CLASSES:
+            # small local models sometimes read the text right but pick "unknown": fall back to keywords
+            cls = keyword_class(d.get('text_read', ''))
+        return SignResult(cls, d.get('text_read', ''), float(d.get('confidence', 0.0) or 0.0), dt, text)
+
+
+# ---------------------------------------------------------------------------
 # OCR baseline (Tesseract + keyword rules)
 # ---------------------------------------------------------------------------
 
@@ -166,10 +215,12 @@ class GroundTruthClassifier:
 
 
 def make_classifier(backend: str, **kw):
+    if backend == 'ollama':
+        return OllamaClassifier(**kw)
     if backend == 'claude':
         return ClaudeClassifier(**kw)
     if backend == 'ocr':
         return OcrClassifier()
     if backend == 'ground_truth':
         return GroundTruthClassifier()
-    raise ValueError(f'unknown backend {backend!r} (claude | ocr | ground_truth)')
+    raise ValueError(f'unknown backend {backend!r} (ollama | claude | ocr | ground_truth)')

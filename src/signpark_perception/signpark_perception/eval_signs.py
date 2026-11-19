@@ -3,8 +3,8 @@
 Images are labeled by folder name:  <dir>/<class>/<anything>.{jpg,png}
 Crops saved by the sign reader in sim are labeled by file name: <spot>_<class>_<n>.png
 
-    ros2 run signpark_perception eval_signs --dir src/signpark_gazebo/signs --backends claude ocr
-    ros2 run signpark_perception eval_signs --crops ~/.ros/signpark/scenario_1/crops --backends claude
+    ros2 run signpark_perception eval_signs --dir src/signpark_gazebo/signs --backends ollama ocr
+    ros2 run signpark_perception eval_signs --crops ~/.ros/signpark/scenario_1/crops --backends ollama
 
 Writes a CSV of every prediction and prints accuracy + confusion matrix per backend.
 """
@@ -50,8 +50,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--dir', help='folder with <class>/ sub-folders of photos')
     ap.add_argument('--crops', help='folder of sim crops saved by sign_reader')
-    ap.add_argument('--backends', nargs='+', default=['claude', 'ocr'])
-    ap.add_argument('--model', default='claude-opus-5-5')
+    ap.add_argument('--backends', nargs='+', default=['ollama'], help='ollama | claude | ocr | ground_truth')
+    ap.add_argument('--model', default='', help='model name for ollama/claude (default: qwen2.5vl:3b / claude-opus-5-5)')
     ap.add_argument('--include-synthetic', action='store_true', help='also evaluate synthetic_* placeholders')
     ap.add_argument('--out', default='results/e1_signs.csv')
     args = ap.parse_args()
@@ -62,7 +62,7 @@ def main():
     print(f'{len(items)} images')
     rows = []
     for b in args.backends:
-        clf = make_classifier(b, **({'model': args.model} if b == 'claude' else {}))
+        clf = make_classifier(b, **({'model': args.model} if args.model and b in ('ollama', 'claude') else {}))
         for f, truth in items:
             img = np.array(Image.open(f).convert('RGB'))
             r = clf.classify(img, truth) if b == 'ground_truth' else clf.classify(img)

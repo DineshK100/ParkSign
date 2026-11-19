@@ -58,6 +58,7 @@ class ParkServer(Node):
         self.approach = p('straight_approach', 2.5).value   # m, 0 disables the staging pose
         self.max_replans = p('max_replans', 4).value         # replan at each cusp
         self.reverse_gain = p('reverse_steer_gain', 1.35).value
+        self.max_corrections = p('max_corrections', 2).value
         self.csv_path = os.path.expanduser(p('results_csv', 'results/park_trials.csv').value)
         self.car = load_car()
         self.obs = ObstacleSet(obstacles(self.lot))
@@ -258,18 +259,21 @@ class ParkServer(Node):
             s = np.linspace(0.0, self.approach, int(self.approach / 0.1) + 1)[1:]
             straight = np.stack([target.x + d * s * ux, target.y + d * s * uy, np.full_like(s, goal.yaw)], axis=1)
         seg_count = 0
-        for attempt in range(self.max_replans + 1):
+        corrections = 0
+        for attempt in range(self.max_replans + self.max_corrections * 3 + 1):
             path, msg = self.plan(target)
             if path is None and straight is not None and attempt == 0:
                 self.get_logger().info(f'staging pose unreachable ({msg}); planning straight to the goal')
                 straight, target = None, goal
                 path, msg = self.plan(target)
             if path is None:
+                if corrections:  # a correction could not be planned: keep what we have
+                    break
                 return False, msg
             full = np.vstack([path, straight]) if straight is not None else path
             self.publish_path(full)
             segs = split_segments(full)
-            last = len(segs) == 1 or attempt == self.max_replans
+            last = len(segs) == 1 or attempt >= self.max_replans + corrections * 3
             self.get_logger().info(f'plan {attempt}: {len(full)} poses, {len(segs)} segment(s)')
             # Follow only up to the next cusp, then replan from where the car really is.
             for pts, direction in (segs if last else segs[:1]):
@@ -277,8 +281,16 @@ class ParkServer(Node):
                 if not ok:
                     return False, msg
                 seg_count += 1
-            if last:
+            if not last:
+                continue
+            x, y, yaw, _ = self.odom
+            if (math.hypot(x - goal.x, y - goal.y) <= self.pos_tol and
+                    heading_error_deg(yaw, goal.yaw) <= self.yaw_tol) or corrections >= self.max_corrections:
                 break
+            # Outside tolerance: like a driver, pull out a little and try again (planned from here).
+            corrections += 1
+            straight, target = None, goal
+            self.get_logger().info(f'correction {corrections}: replanning from the current pose')
         return self.align(gh, goal, account), ''
 
     def follow(self, gh, pts, direction, k, goal, account, fb):
